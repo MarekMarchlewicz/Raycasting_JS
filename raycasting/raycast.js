@@ -33,6 +33,13 @@ class Map {
             }
         }
     }
+    hasWallAt(x, y){
+        if(x < 0 || x > WINDOW_WIDTH || y  < 0 || y > WINDOW_HEIGHT)
+            return true;
+        var row = Math.floor(x / TILE_SIZE);
+        var column = Math.floor(y / TILE_SIZE);
+        return this.grid[column][row] == 1;
+    }
 }
 
 class Player {
@@ -59,16 +66,25 @@ class Player {
     update()
     {
         this.rotationAngle += this.turnDirection * this.rotationSpeed;
-        this.x += Math.cos(this.rotationAngle) * this.moveSpeed * this.walkDirection;
-        this.y += Math.sin(this.rotationAngle) * this.moveSpeed * this.walkDirection;
+        var newX = this.x + Math.cos(this.rotationAngle) * this.moveSpeed * this.walkDirection;
+        var newY = this.y + Math.sin(this.rotationAngle) * this.moveSpeed * this.walkDirection;
+
+        if(!grid.hasWallAt(newX, newY)){
+            this.x = newX;
+            this.y = newY;
+        }
     }
 }
 
 var grid = new Map();
 var player = new Player();
 
+function setup() {
+    createCanvas(WINDOW_WIDTH, WINDOW_HEIGHT);
+    document.addEventListener('keyup', keyUpEvent);
+    document.addEventListener('keydown', keyDownEvent);
+}
 function keyUpEvent(e) {
-    console.log(e.key);
     if(e.key =="ArrowUp"){
         player.walkDirection = 0;
     } else if(e.key == "ArrowDown") {
@@ -90,11 +106,6 @@ function keyDownEvent(e)
     } else if(e.key == "ArrowLeft") {
         player.turnDirection = -1;
     }
-}
-function setup() {
-    createCanvas(WINDOW_WIDTH, WINDOW_HEIGHT);
-    document.addEventListener('keyup', keyUpEvent);
-    document.addEventListener('keydown', keyDownEvent);
 }
 
 function update() {
