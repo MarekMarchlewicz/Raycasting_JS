@@ -13,7 +13,7 @@ const WALL_STRIP_WIDTH = 1;
 const NUM_RAYS = WINDOW_WIDTH / WALL_STRIP_WIDTH;
 
 const DEBUG_RAY_LENGTH = 30;
-const ALPHA_DIST_FALLOFF = 10000;
+const ALPHA_DIST_FALLOFF = 50000;
 
 class Map {
     constructor() {
@@ -103,12 +103,10 @@ class Ray {
         stroke("red");
         line(player.x * MINIMAP_SCALE_FACTOR, player.y * MINIMAP_SCALE_FACTOR, this.wallHitX * MINIMAP_SCALE_FACTOR, this.wallHitY * MINIMAP_SCALE_FACTOR);
     }
-    cast(columnId){
+    cast(){
         var xintercept, yintercept;
         var xstep, ystep;
-        
-        console.log("Right: " + this.isFacingRight + " left: " + this.isFacingLeft);
-    
+            
         ////// Horizontal //////
         var foundHorzWallHit = false;
         var hWallHitX = 0;
@@ -127,11 +125,8 @@ class Ray {
         var nextHorzTouchX = xintercept;
         var nextHorzTouchY = yintercept;
 
-        if(this.isFacingUp)
-            nextHorzTouchY--;
-
-        while(nextHorzTouchX > 0 && nextHorzTouchX < WINDOW_WIDTH && nextHorzTouchY > 0 && nextHorzTouchY <= WINDOW_HEIGHT){
-            if(grid.hasWallAt(nextHorzTouchX, nextHorzTouchY)){
+        while(nextHorzTouchX >= 0 && nextHorzTouchX <= WINDOW_WIDTH && nextHorzTouchY >= 0 && nextHorzTouchY <= WINDOW_HEIGHT){
+            if(grid.hasWallAt(nextHorzTouchX, nextHorzTouchY - (this.isFacingUp ? 1 : 0))){
                 foundHorzWallHit = true;
                 hWallHitX = nextHorzTouchX;
                 hWallHitY = nextHorzTouchY;
@@ -162,11 +157,8 @@ class Ray {
         var nextVertTouchX = xintercept;
         var nextVertTouchY = yintercept;
 
-        if(this.isFacingLeft)
-            nextVertTouchX--;
-
-        while(nextVertTouchX > 0 && nextVertTouchX < WINDOW_WIDTH && nextVertTouchY > 0 && nextVertTouchY <= WINDOW_HEIGHT){
-            if(grid.hasWallAt(nextVertTouchX, nextVertTouchY)){
+        while(nextVertTouchX >= 0 && nextVertTouchX <= WINDOW_WIDTH && nextVertTouchY >= 0 && nextVertTouchY <= WINDOW_HEIGHT){
+            if(grid.hasWallAt(nextVertTouchX  - (this.isFacingLeft ? 1 : 0), nextVertTouchY)){
                 foundVertWallHit = true;
                 vWallHitX = nextVertTouchX;
                 vWallHitY = nextVertTouchY;
@@ -182,12 +174,17 @@ class Ray {
         var hHitDist = foundHorzWallHit ? distanceBetweenPoint(player.x, player.y, hWallHitX, hWallHitY) : Number.MAX_VALUE;
         var vHitDist = foundVertWallHit ? distanceBetweenPoint(player.x, player.y, vWallHitX, vWallHitY) : Number.MAX_VALUE;
 
-        this.wallHitX = hHitDist < vHitDist ? hWallHitX : vWallHitX;
-        this.wallHitY = hHitDist < vHitDist ? hWallHitY : vWallHitY;
-        
-        this.distance = Math.min(hHitDist, vHitDist);
-
-        this.wasHitVertical = vHitDist < hHitDist;
+        if(vHitDist < hHitDist){
+            this.wallHitX = vWallHitX;
+            this.wallHitY = vWallHitY;
+            this.wasHitVertical = true;
+            this.distance = vHitDist;
+        } else{ 
+            this.wallHitX = hWallHitX;
+            this.wallHitY = hWallHitY
+            this.wasHitVertical = false;
+            this.distance = hHitDist;
+        }        
     }
 }
 
@@ -207,7 +204,14 @@ function render3DProjectedWalls() {
         var wallStripHeight = (TILE_SIZE / rayDist) *distProjectionPlane;
 
         var alpha = ALPHA_DIST_FALLOFF / rayDist;
-        fill(255, 255, 255, alpha);
+        if(alpha > 255)
+            alpha = 255;
+            
+        if(ray.wasHitVertical)
+           fill(172, 220, 255, alpha);
+        else
+            fill(255, 201, 172, alpha);
+
         noStroke();
         rect(i * WALL_STRIP_WIDTH, WINDOW_HEIGHT / 2 - wallStripHeight / 2, WALL_STRIP_WIDTH, wallStripHeight);
     }
@@ -257,20 +261,17 @@ function keyDownEvent(e)
 
 function castAllRays()
 {
-    var columnId = 0;
-
     var rayAngle = player.rotationAngle - (FOV_ANGLE / 2);
 
     rays = [];
     
     for(var i = 0; i < NUM_RAYS; i++){
         var ray = new Ray(rayAngle);
-        ray.cast(columnId);
+        ray.cast();
 
         rays.push(ray);
 
         rayAngle += FOV_ANGLE / NUM_RAYS;
-        columnId++;
     }
 }
 
